@@ -1,3 +1,94 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "bg-purple",
+      "description": "Purple",
+      "imageUrl": "https://images.unsplash.com/photo-1500462918059-b1a0cb512f1d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxwdXJwbGUlMjBzb2xpZHxlbnwwfHx8fDE3NjA3NDY0NTF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "purple solid"
+    },
+    {
+      "id": "bg-orange",
+      "description": "Orange",
+      "imageUrl": "https://images.unsplash.com/photo-1760216273838-56bdc53ecf4f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxvcmFuZ2UlMjBzb2xpZHxlbnwwfHx8fDE3NjA3NDY0NTF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "orange solid"
+    },
+    {
+      "id": "bg-black",
+      "description": "Black",
+      "imageUrl": "https://images.unsplash.com/photo-1512647591120-610d23bd8c30?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxibGFjayUyMHNvbGlkfGVufDB8fHx8MTc2MDc0NjQ1MXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "black solid"
+    },
+    {
+      "id": "head-classic",
+      "description": "Classic Punk",
+      "imageUrl": "https://images.unsplash.com/photo-1635414986839-71230daef6d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxwdW1wa2luJTIwaGVhZHxlbnwwfHx8fDE3NjA3NDY0NTF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "pumpkin head"
+    },
+    {
+      "id": "head-goofy",
+      "description": "Goofy Grin",
+      "imageUrl": "https://images.unsplash.com/photo-1760329291526-beb7a0ddae17?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxnb29meSUyMHB1bXBraW58ZW58MHx8fHwxNzYwNzQ2NDUxfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "goofy pumpkin"
+    },
+    {
+      "id": "shirt-black",
+      "description": "Black Tee",
+      "imageUrl": "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxibGFjayUyMHNoaXJ0fGVufDB8fHx8MTc2MDc0NjQ1MXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "black shirt"
+    },
+    {
+      "id": "shirt-purple",
+      "description": "Purple Hoodie",
+      "imageUrl": "https://images.unsplash.com/photo-1620780895032-7a31e4251c82?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxwdXJwbGUlMjBob29kaWV8ZW58MHx8fHwxNzYwNzM0NzQ1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "purple hoodie"
+    },
+    {
+      "id": "chain-none",
+      "description": "None",
+      "imageUrl": "",
+      "imageHint": ""
+    },
+    {
+      "id": "chain-gold",
+      "description": "Gold Chain",
+      "imageUrl": "https://images.unsplash.com/photo-1613498510372-8901cad084a2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxnb2xkJTIwY2hhaW58ZW58MHx8fHwxNzYwNzQ2NDUxfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "gold chain"
+    },
+    {
+      "id": "chain-silver",
+      "description": "Silver Chain",
+      "imageUrl": "https://images.unsplash.com/photo-1719594447762-2ed6184ee8a5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxzaWx2ZXIlMjBjaGFpbnxlbnwwfHx8fDE3NjA3NDY0NTF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "silver chain"
+    },
+    {
+      "id": "glasses-none",
+      "description": "None",
+      "imageUrl": "",
+      "imageHint": ""
+    },
+    {
+      "id": "glasses-3d",
+      "description": "3D Glasses",
+      "imageUrl": "https://images.unsplash.com/photo-1604115707355-73a0b1a10870?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHwzZCUyMGdsYXNzZXN8ZW58MHx8fHwxNzYwNzQ2NDUxfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "3d glasses"
+    },
+    {
+      "id": "glasses-sun",
+      "description": "Sunglasses",
+      "imageUrl": "https://images.unsplash.com/photo-1577803645773-f96470509666?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzdW5nbGFzc2VzfGVufDB8fHx8MTc2MDczMzI5Mnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "sunglasses"
+    },
+    {
+      "id": "cigarette-none",
+      "description": "None",
+      "imageUrl": "",
+      "imageHint": ""
+    },
+    {
+      "id": "cigarette-classic",
+      "description": "Cigarette",
+      "imageUrl": "https://images.unsplash.com/photo-1480444704010-31f5e7c5707c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxjaWdhcmV0dGV8ZW58MHx8fHwxNzYwNzQ2NDUxfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "cigarette"
+    }
+  ]
 }

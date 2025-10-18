@@ -1,3 +1,9 @@
+import SpookyPunksPage from "@/components/spooky-punks-page";
+
 export default function Home() {
-  return <></>;
+  return (
+    <main>
+      <SpookyPunksPage />
+    </main>
+  );
 }
