@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { signInAnonymously, onAuthStateChanged, type User } from "firebase/auth";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, Timestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { TRAIT_DATA, TRAIT_LAYER_NAMES, type SelectedTraits } from "@/data/traits";
 import { saveToken } from "@/app/actions";
@@ -31,6 +31,7 @@ export default function SpookyPunksPage() {
   }, []);
 
   useEffect(() => {
+    if(!auth) return;
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
@@ -49,7 +50,7 @@ export default function SpookyPunksPage() {
   }, [randomizeCharacter]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !db) return;
 
     const APP_ID = "spooky-punks";
     const tokensPath = `artifacts/${APP_ID}/users/${user.uid}/pumpkin_tokens`;

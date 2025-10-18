@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/firebase";
 import type { SelectedTraits } from "@/data/traits";
-import { collection, addDoc, getDocs, query } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, serverTimestamp } from "firebase/firestore";
 
 const APP_ID = "spooky-punks";
 
@@ -23,7 +23,7 @@ export async function saveToken(userId: string, recipe: SelectedTraits) {
     await addDoc(tokensCollectionRef, {
       name: tokenName,
       recipe: recipe,
-      createdAt: new Date(),
+      createdAt: serverTimestamp(),
     });
 
     return { success: true, name: tokenName };
