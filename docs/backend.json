@@ -29,6 +29,11 @@
           "type": "string",
           "description": "The date and time the token was forged.",
           "format": "date-time"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "The URL of the generated token image.",
+          "format": "uri"
         }
       },
       "required": [
@@ -36,7 +41,8 @@
         "userId",
         "tokenName",
         "traitRecipe",
-        "forgedAt"
+        "forgedAt",
+        "imageUrl"
       ]
     },
     "User": {

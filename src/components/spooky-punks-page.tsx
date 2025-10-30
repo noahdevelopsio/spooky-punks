@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { collection, query, orderBy } from "firebase/firestore";
+import { collection, query, orderBy, serverTimestamp } from "firebase/firestore";
 import { 
   useFirebase,
   useUser, 
@@ -17,12 +17,14 @@ import Header from "@/components/header";
 import CharacterDisplay from "@/components/character-display";
 import CustomizationControls from "@/components/customization-controls";
 import SavedTokensList, { type Token } from "@/components/saved-tokens-list";
+import { generatePunk, type GeneratePunkInput } from "@/ai/flows/generate-punk-flow";
 
 export default function SpookyPunksPage() {
   const { auth, firestore } = useFirebase();
   const { user, isUserLoading } = useUser();
   const [selectedTraits, setSelectedTraits] = useState<SelectedTraits | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
   const randomizeCharacter = useCallback(() => {
@@ -33,6 +35,7 @@ export default function SpookyPunksPage() {
       randomTraits[layerName] = layer.options[randomIndex].id;
     });
     setSelectedTraits(randomTraits);
+    setGeneratedImageUrl(null); // Clear previous image on randomize
   }, []);
 
   useEffect(() => {
@@ -50,10 +53,16 @@ export default function SpookyPunksPage() {
     return query(collection(firestore, `users/${user.uid}/pumpkin_tokens`), orderBy("forgedAt", "desc"));
   }, [user, firestore]);
 
-  const { data: savedTokens, isLoading: areTokensLoading } = useCollection<Token>(tokensQuery);
+  const { data: savedTokens } = useCollection<Token>(tokensQuery);
 
   const handleTraitChange = (layer: string, traitId: string) => {
-    setSelectedTraits((prev) => (prev ? { ...prev, [layer]: traitId } : null));
+    setSelectedTraits((prev) => {
+      const newTraits = prev ? { ...prev, [layer]: traitId } : null;
+      if (JSON.stringify(prev) !== JSON.stringify(newTraits)) {
+        setGeneratedImageUrl(null); // Clear image if traits change
+      }
+      return newTraits;
+    });
   };
 
   const handleForgeToken = async () => {
@@ -62,8 +71,15 @@ export default function SpookyPunksPage() {
       return;
     }
     setIsSaving(true);
+    setGeneratedImageUrl(null);
     
     try {
+      const { imageUrl } = await generatePunk({ traits: selectedTraits });
+      if (!imageUrl) {
+        throw new Error("Image generation failed.");
+      }
+      setGeneratedImageUrl(imageUrl);
+
       const tokensCollectionRef = collection(firestore, `users/${user.uid}/pumpkin_tokens`);
       const tokenCount = savedTokens?.length ?? 0;
       const tokenName = `Pumpkin Punk #${(tokenCount + 1).toString().padStart(3, '0')}`;
@@ -71,16 +87,18 @@ export default function SpookyPunksPage() {
       addDocumentNonBlocking(tokensCollectionRef, {
         tokenName: tokenName,
         traitRecipe: selectedTraits,
-        forgedAt: new Date(),
+        forgedAt: serverTimestamp(),
         userId: user.uid,
+        imageUrl: imageUrl,
       });
 
       toast({ title: "Punk Forged!", description: `Your token "${tokenName}" has been saved.` });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       toast({ variant: "destructive", title: "Forge Failed", description: errorMessage });
+      setGeneratedImageUrl(null); // Clear image on failure
     } finally {
-      setTimeout(() => setIsSaving(false), 1000); // Brief disable
+      setIsSaving(false);
     }
   };
 
@@ -90,7 +108,7 @@ export default function SpookyPunksPage() {
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 flex flex-col items-center gap-8">
-            <CharacterDisplay selectedTraits={selectedTraits} />
+            <CharacterDisplay imageUrl={generatedImageUrl} isGenerating={isSaving} />
             <div className="w-full">
               <SavedTokensList tokens={savedTokens || []} />
             </div>

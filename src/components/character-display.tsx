@@ -1,43 +1,33 @@
 "use client";
 
 import Image from "next/image";
-import { TRAIT_DATA, type SelectedTraits } from "@/data/traits";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Wand2 } from "lucide-react";
 
 type CharacterDisplayProps = {
-  selectedTraits: SelectedTraits | null;
+  imageUrl: string | null;
+  isGenerating: boolean;
 };
 
-export default function CharacterDisplay({ selectedTraits }: CharacterDisplayProps) {
-  const layers = Object.entries(TRAIT_DATA).map(([layerName, layerData]) => {
-    const traitId = selectedTraits?.[layerName];
-    if (!traitId) return null;
-
-    const trait = layerData.options.find((opt) => opt.id === traitId);
-    if (!trait || !trait.url) return null;
-
-    return {
-      ...trait,
-      zIndex: layerData.zIndex,
-    };
-  }).filter(Boolean);
-
+export default function CharacterDisplay({ imageUrl, isGenerating }: CharacterDisplayProps) {
   return (
     <div className="relative aspect-square w-full max-w-[512px] bg-secondary/50 rounded-lg overflow-hidden shadow-2xl shadow-primary/10">
-      {selectedTraits ? (
-        layers.map((layer) => (
+      {isGenerating ? (
+        <div className="h-full w-full flex flex-col items-center justify-center gap-4 text-primary-foreground">
+            <Wand2 className="h-12 w-12 animate-pulse text-primary" />
+            <p className="font-headline text-lg">Forging your Punk...</p>
+            <p className="text-sm text-muted-foreground">This can take a moment.</p>
+        </div>
+      ) : imageUrl ? (
           <Image
-            key={layer.id}
-            src={layer.url}
-            alt={layer.label}
+            key={imageUrl}
+            src={imageUrl}
+            alt="Generated Spooky Punk"
             fill
             priority
-            unoptimized // For picsum, to avoid caching issues with same seed
             className="pixelated absolute inset-0"
-            style={{ zIndex: layer.zIndex }}
-            data-ai-hint={layer.imageHint}
+            data-ai-hint="spooky punk"
           />
-        ))
       ) : (
         <Skeleton className="h-full w-full" />
       )}

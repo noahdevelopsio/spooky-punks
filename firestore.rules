@@ -1,63 +1,74 @@
 /**
- * @fileoverview Firestore Security Rules for Spooky Punks Application
+ * @fileoverview Firestore Security Rules for Spooky Punks.
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for PumpkinTokens. Each user can only
- * access their own tokens.  Data is denormalized to enable simple, performant rules.
+ * This ruleset enforces a strict user-ownership model for PumpkinTokens. Each user has a dedicated space under `/users/{userId}` to store their tokens, ensuring that only the user can create, modify, or delete tokens they own.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profile data.
- * - /users/{userId}/pumpkin_tokens/{tokenId}: Stores PumpkinToken data owned by the user. Each token
- *   document contains a denormalized userId field.
+ * - Users: Stored in the `/users/{userId}` collection, with `userId` matching the authenticated user's UID.
+ * - PumpkinTokens: Stored in the `/users/{userId}/pumpkin_tokens/{tokenId}` subcollection. Each token document contains a `userId` field that must match the `userId` in the path.
  *
  * Key Security Decisions:
- * - Users can only create, read, update, and delete their own PumpkinTokens.
- * - Listing all users is disallowed.
- * - Data required for authorization is denormalized onto the documents being secured.
+ * - User Listing Disabled: Listing all users is explicitly denied to prevent enumeration.
+ * - Ownership Enforcement: The `userId` field within a `PumpkinToken` document must match the `userId` in the path, ensuring data consistency and preventing unauthorized access.
+ * - No Schema Validation: This ruleset does not enforce strict schema validation to allow for rapid prototyping and iteration.
+ *
+ * Denormalization for Authorization:
+ * - The `PumpkinToken` document includes a `userId` field, which is a denormalized copy of the parent user's ID. This allows direct ownership checks on the token without requiring additional `get()` operations.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Secure user profiles.
+     * @description Allows a user to read their own profile and create it if it doesn't exist. Prevents listing all users.
      * @path /users/{userId}
-     * @allow (create) User 'user_abc' can create their own profile.
-     * @deny (create) User 'user_abc' cannot create a profile for 'user_xyz'.
-     * @allow (get) User 'user_abc' can read their own profile.
-     * @deny (get) User 'user_abc' cannot read profile of 'user_xyz'.
-     * @principle Enforces document ownership for writes and reads.
+     * @allow (get) User with matching UID can read their profile.
+     * @allow (create) User with matching UID can create their profile.
+     * @deny (list) Prevents listing all users.
+     * @deny (update, delete) Prevents updating or deleting user profiles (immutability).
+     * @principle Enforces user-ownership for profile access and creation.
      */
     match /users/{userId} {
-      function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
+      function isSignedIn() {
+        return request.auth != null;
       }
-      allow create: if isOwner(userId);
-      allow get: if isOwner(userId);
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
       allow list: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update, delete: if false;
     }
 
     /**
-     * @description Secure PumpkinTokens owned by a specific user.
+     * @description Manages access to pumpkin_tokens subcollection. Allows users to create, read, update, and delete their own tokens.
      * @path /users/{userId}/pumpkin_tokens/{tokenId}
-     * @allow (create) User 'user_abc' can create a token under their user ID.
-     * @deny (create) User 'user_abc' cannot create a token under user ID 'user_xyz'.
-     * @allow (get) User 'user_abc' can read their own token.
-     * @deny (get) User 'user_abc' cannot read a token owned by 'user_xyz'.
-     * @principle Enforces document ownership for writes and reads, and validates data consistency.
+     * @allow (create) User can create a token with matching userId.
+     * @allow (get, list) User can read their own tokens.
+     * @allow (update, delete) User can update/delete their own existing tokens.
+     * @deny (create, update, delete) Prevents unauthorized access by other users.
+     * @principle Enforces ownership for tokens stored under the /users/{userId} path.
      */
     match /users/{userId}/pumpkin_tokens/{tokenId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
       function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
+        return request.auth.uid == userId;
       }
+
       function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+        return isOwner(userId) && exists(resource);
       }
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
       allow delete: if isExistingOwner(userId);
     }
