@@ -2,32 +2,33 @@
  * @fileoverview Firestore Security Rules for Spooky Punks.
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for PumpkinTokens. Each user has a dedicated space under `/users/{userId}` to store their tokens, ensuring that only the user can create, modify, or delete tokens they own.
+ * This ruleset enforces a strict user-ownership model for PumpkinTokens. Each user has full control over their own tokens stored under their user ID.
  *
  * Data Structure:
- * - Users: Stored in the `/users/{userId}` collection, with `userId` matching the authenticated user's UID.
- * - PumpkinTokens: Stored in the `/users/{userId}/pumpkin_tokens/{tokenId}` subcollection. Each token document contains a `userId` field that must match the `userId` in the path.
+ * - /users/{userId}: Stores user profile data.
+ * - /users/{userId}/pumpkin_tokens/{tokenId}: Stores individual PumpkinToken documents, ensuring each token is owned by a specific user.
  *
  * Key Security Decisions:
- * - User Listing Disabled: Listing all users is explicitly denied to prevent enumeration.
- * - Ownership Enforcement: The `userId` field within a `PumpkinToken` document must match the `userId` in the path, ensuring data consistency and preventing unauthorized access.
- * - No Schema Validation: This ruleset does not enforce strict schema validation to allow for rapid prototyping and iteration.
- *
- * Denormalization for Authorization:
- * - The `PumpkinToken` document includes a `userId` field, which is a denormalized copy of the parent user's ID. This allows direct ownership checks on the token without requiring additional `get()` operations.
+ * - Users can only create, read, update, and delete their own tokens.
+ * - Listing tokens is restricted to the owner.
+ * - The 'userId' field is denormalized within each PumpkinToken document to ensure authorization independence and prevent expensive `get()` calls.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows a user to read their own profile and create it if it doesn't exist. Prevents listing all users.
+     * @description Controls access to user profile documents.
      * @path /users/{userId}
-     * @allow (get) User with matching UID can read their profile.
-     * @allow (create) User with matching UID can create their profile.
-     * @deny (list) Prevents listing all users.
-     * @deny (update, delete) Prevents updating or deleting user profiles (immutability).
-     * @principle Enforces user-ownership for profile access and creation.
+     * @allow (create) User with ID 'user123' can create their own profile.
+     * @deny (create) User with ID 'user123' cannot create a profile with a different ID 'user456'.
+     * @allow (get) User with ID 'user123' can read their own profile.
+     * @deny (get) User with ID 'user123' cannot read a profile with a different ID 'user456'.
+     * @allow (update) User with ID 'user123' can update their own profile.
+     * @deny (update) User with ID 'user123' cannot update a profile with a different ID 'user456'.
+     * @allow (delete) User with ID 'user123' can delete their own profile.
+     * @deny (delete) User with ID 'user123' cannot delete a profile with a different ID 'user456'.
+     * @principle Enforces document ownership for user profiles.
      */
     match /users/{userId} {
       function isSignedIn() {
@@ -38,20 +39,33 @@ service cloud.firestore {
         return request.auth.uid == userId;
       }
 
+      // Allow the user to create their own profile.
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+
+      // Allow the user to read their own profile.
       allow get: if isSignedIn() && isOwner(userId);
+
+      // Allow the user to update their own profile.
+      allow update: if isSignedIn() && isOwner(userId) && resource.data.id == userId;
+
+      // Allow the user to delete their own profile.
+      allow delete: if isSignedIn() && isOwner(userId) && resource.data.id == userId;
+
       allow list: if false;
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update, delete: if false;
     }
 
     /**
-     * @description Manages access to pumpkin_tokens subcollection. Allows users to create, read, update, and delete their own tokens.
+     * @description Controls access to PumpkinToken documents within a user's subcollection.
      * @path /users/{userId}/pumpkin_tokens/{tokenId}
-     * @allow (create) User can create a token with matching userId.
-     * @allow (get, list) User can read their own tokens.
-     * @allow (update, delete) User can update/delete their own existing tokens.
-     * @deny (create, update, delete) Prevents unauthorized access by other users.
-     * @principle Enforces ownership for tokens stored under the /users/{userId} path.
+     * @allow (create) User with ID 'user123' can create a token under their profile with correct userId.
+     * @deny (create) User with ID 'user123' cannot create a token under their profile with incorrect userId.
+     * @allow (get) User with ID 'user123' can read a token under their profile.
+     * @deny (get) User with ID 'user123' cannot read a token under another user's profile.
+     * @allow (update) User with ID 'user123' can update a token under their profile.
+     * @deny (update) User with ID 'user123' cannot update a token under another user's profile.
+     * @allow (delete) User with ID 'user123' can delete a token under their profile.
+     * @deny (delete) User with ID 'user123' cannot delete a token under another user's profile.
+     * @principle Enforces document ownership for writes and validates relational integrity.
      */
     match /users/{userId}/pumpkin_tokens/{tokenId} {
       function isSignedIn() {
@@ -63,14 +77,23 @@ service cloud.firestore {
       }
 
       function isExistingOwner(userId) {
-        return isOwner(userId) && exists(resource);
+          return isOwner(userId) && resource != null;
       }
 
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if false;
+      // Allow the user to create a new token under their profile.
       allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId;
+
+      // Allow the user to read a token under their profile.
+      allow get: if isSignedIn() && isOwner(userId);
+
+      // Allow the user to update a token under their profile.
       allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+
+      // Allow the user to delete a token under their profile.
       allow delete: if isExistingOwner(userId);
+
+      // Allow listing tokens only for the owner. This addresses the original error.
+      allow list: if isSignedIn() && isOwner(userId);
     }
   }
 }
