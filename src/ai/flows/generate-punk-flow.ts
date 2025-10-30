@@ -77,7 +77,7 @@ const generatePunkFlow = ai.defineFlow(
     
     Combine the following traits and styles into one image. Do not show multiple options.
     - Style: Pixelated, 8-bit, punk rock aesthetic.
-    - Character: The main subject is a pumpkin head character.
+    - Character: The main subject is a a pumpkin head character.
     - Traits to include: ${traitDescriptions.join(', ')}.
 
     Use the provided images as strong visual references for the style and content of each trait. The final image should be a single, unified character, not a collage. The background should be visible where not obscured by other layers.
