@@ -14,19 +14,17 @@ const firebaseConfig: FirebaseOptions = {
 
 let app, auth, db;
 
-if (typeof window !== 'undefined' && !getApps().length) {
+// This pattern ensures that Firebase is initialized only once.
+if (getApps().length === 0) {
   app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-} else if (typeof window !== 'undefined') {
-  app = getApp();
-  auth = getAuth(app);
-  db = getFirestore(app);
 } else {
-  // For server-side rendering
-  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
+  app = getApp();
 }
+
+// These services can be initialized here and reused throughout the app.
+// It's safe to call them multiple times as they will return the same instance.
+auth = getAuth(app);
+db = getFirestore(app);
+
 
 export { app, auth, db };
