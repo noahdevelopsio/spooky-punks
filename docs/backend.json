@@ -1,0 +1,105 @@
+{
+  "entities": {
+    "PumpkinToken": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PumpkinToken",
+      "type": "object",
+      "description": "Represents a Spooky Punks token, storing its unique identifier, associated user, name, and trait recipe.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the PumpkinToken entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N PumpkinToken)"
+        },
+        "tokenName": {
+          "type": "string",
+          "description": "The unique name of the token (e.g., 'Pumpkin Punk #001')."
+        },
+        "traitRecipe": {
+          "type": "array",
+          "description": "The list of trait ids selected for the token.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "forgedAt": {
+          "type": "string",
+          "description": "The date and time the token was forged.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "tokenName",
+        "traitRecipe",
+        "forgedAt"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the Spooky Punks application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        }
+      },
+      "required": [
+        "id"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Collection to store user profiles. Each document represents a user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/pumpkin_tokens/{tokenId}",
+        "definition": {
+          "entityName": "PumpkinToken",
+          "schema": {
+            "$ref": "#/backend/entities/PumpkinToken"
+          },
+          "description": "Subcollection to store PumpkinToken documents owned by a specific user. Includes denormalized 'userId' for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "tokenId",
+              "description": "The unique identifier of the PumpkinToken."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability for the Spooky Punks application. It follows the core principles of avoiding hierarchical authorization dependencies and promoting explicit security rules. \n\nAuthorization Independence (CRITICAL): Denormalization is heavily used to avoid `get()` calls in security rules. Specifically, the `userId` is stored directly within each `PumpkinToken` document, enabling direct ownership checks without needing to query parent documents.\n\nStructural Segregation (Homogeneous Security Posture): User-specific data (PumpkinTokens) is stored under the `/users/{userId}` path. This segregation simplifies security rules, ensuring all documents within a collection share similar access control requirements. No data with differing access needs are mixed.\n\nAccess Modeling (Standardization and Consistency):\n*   Private User Data: Path-based ownership is used for user-owned PumpkinTokens, following the `/users/{userId}/pumpkin_tokens/{tokenId}` pattern.\nQAPs (Rules are not Filters): The structure is designed to enable secure `list` operations. By storing tokens under the user's path (`/users/{userId}/pumpkin_tokens/{tokenId}`), listing tokens for a specific user can be done securely using path-based rules without the need for filtering based on document content.\n\nInvariants: The structure supports the integrity of ownership by explicitly storing the `userId` within each `PumpkinToken` document. Timestamps are supported with the `forgedAt` field."
+  }
+}
