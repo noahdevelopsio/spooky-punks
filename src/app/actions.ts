@@ -1,18 +1,18 @@
 "use server";
 
-import { db } from "@/lib/firebase";
+import { initializeFirebase, addDocumentNonBlocking } from "@/firebase";
 import type { SelectedTraits } from "@/data/traits";
-import { collection, addDoc, getDocs, query, serverTimestamp } from "firebase/firestore";
-
-const APP_ID = "spooky-punks";
+import { collection, getDocs, query, serverTimestamp } from "firebase/firestore";
 
 export async function saveToken(userId: string, recipe: SelectedTraits) {
   if (!userId || !recipe) {
     return { success: false, error: "Invalid user or recipe" };
   }
 
+  const { firestore } = initializeFirebase();
+
   try {
-    const tokensCollectionRef = collection(db, `artifacts/${APP_ID}/users/${userId}/pumpkin_tokens`);
+    const tokensCollectionRef = collection(firestore, `users/${userId}/pumpkin_tokens`);
     
     // Get current token count to generate a name
     const q = query(tokensCollectionRef);
@@ -20,10 +20,11 @@ export async function saveToken(userId: string, recipe: SelectedTraits) {
     const tokenCount = querySnapshot.size;
     const tokenName = `Pumpkin Punk #${(tokenCount + 1).toString().padStart(3, '0')}`;
 
-    await addDoc(tokensCollectionRef, {
-      name: tokenName,
-      recipe: recipe,
-      createdAt: serverTimestamp(),
+    addDocumentNonBlocking(tokensCollectionRef, {
+      tokenName: tokenName,
+      traitRecipe: recipe,
+      forgedAt: serverTimestamp(),
+      userId: userId,
     });
 
     return { success: true, name: tokenName };

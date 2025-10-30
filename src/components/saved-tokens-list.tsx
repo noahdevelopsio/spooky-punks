@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 
 export type Token = {
   id: string;
-  name: string;
-  recipe: SelectedTraits;
+  tokenName: string;
+  traitRecipe: SelectedTraits;
 };
 
 type SavedTokensListProps = {
@@ -30,9 +30,9 @@ export default function SavedTokensList({ tokens }: SavedTokensListProps) {
             ) : (
               tokens.map((token) => (
                 <div key={token.id} className="p-4 bg-secondary/50 rounded-lg">
-                  <h3 className="font-bold text-lg text-gray-200">{token.name}</h3>
+                  <h3 className="font-bold text-lg text-gray-200">{token.tokenName}</h3>
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {Object.entries(token.recipe).map(([layer, traitId]) => {
+                    {Object.entries(token.traitRecipe).map(([layer, traitId]) => {
                       const trait = TRAIT_DATA[layer]?.options.find(o => o.id === traitId);
                       if (!trait || trait.label === 'None') return null;
                       return (

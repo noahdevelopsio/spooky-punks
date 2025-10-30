@@ -1,11 +1,16 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { signInAnonymously, onAuthStateChanged, type User } from "firebase/auth";
-import { collection, onSnapshot, query, orderBy, Timestamp } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { collection, query, orderBy } from "firebase/firestore";
+import { 
+  useFirebase,
+  useUser, 
+  useCollection,
+  initiateAnonymousSignIn, 
+  addDocumentNonBlocking,
+  useMemoFirebase,
+} from "@/firebase";
 import { TRAIT_DATA, TRAIT_LAYER_NAMES, type SelectedTraits } from "@/data/traits";
-import { saveToken } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 
 import Header from "@/components/header";
@@ -14,9 +19,9 @@ import CustomizationControls from "@/components/customization-controls";
 import SavedTokensList, { type Token } from "@/components/saved-tokens-list";
 
 export default function SpookyPunksPage() {
-  const [user, setUser] = useState<User | null>(null);
+  const { auth, firestore } = useFirebase();
+  const { user, isUserLoading } = useUser();
   const [selectedTraits, setSelectedTraits] = useState<SelectedTraits | null>(null);
-  const [savedTokens, setSavedTokens] = useState<Token[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
@@ -31,67 +36,52 @@ export default function SpookyPunksPage() {
   }, []);
 
   useEffect(() => {
-    if(!auth) return;
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-      } else {
-        signInAnonymously(auth).catch((error) => {
-          console.error("Anonymous sign-in failed:", error);
-          toast({ variant: "destructive", title: "Connection Failed", description: "Could not connect to the service." });
-        });
-      }
-    });
-    return () => unsubscribe();
-  }, [toast]);
+    if (!isUserLoading && !user) {
+      initiateAnonymousSignIn(auth);
+    }
+  }, [isUserLoading, user, auth]);
 
   useEffect(() => {
     randomizeCharacter();
   }, [randomizeCharacter]);
 
-  useEffect(() => {
-    if (!user || !db) return;
+  const tokensQuery = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return query(collection(firestore, `users/${user.uid}/pumpkin_tokens`), orderBy("forgedAt", "desc"));
+  }, [user, firestore]);
 
-    const APP_ID = "spooky-punks";
-    const tokensPath = `artifacts/${APP_ID}/users/${user.uid}/pumpkin_tokens`;
-    const q = query(collection(db, tokensPath), orderBy("createdAt", "desc"));
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const tokens: Token[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        tokens.push({
-          id: doc.id,
-          name: data.name,
-          recipe: data.recipe,
-        });
-      });
-      setSavedTokens(tokens);
-    }, (error) => {
-      console.error("Error fetching saved tokens:", error);
-      toast({ variant: "destructive", title: "Sync Error", description: "Could not fetch your saved Punks." });
-    });
-
-    return () => unsubscribe();
-  }, [user, toast]);
+  const { data: savedTokens, isLoading: areTokensLoading } = useCollection<Token>(tokensQuery);
 
   const handleTraitChange = (layer: string, traitId: string) => {
     setSelectedTraits((prev) => (prev ? { ...prev, [layer]: traitId } : null));
   };
 
   const handleForgeToken = async () => {
-    if (!user || !selectedTraits) {
+    if (!user || !selectedTraits || !firestore) {
       toast({ variant: "destructive", title: "Error", description: "Cannot save token. User or traits not ready." });
       return;
     }
     setIsSaving(true);
-    const result = await saveToken(user.uid, selectedTraits);
-    if (result.success) {
-      toast({ title: "Punk Forged!", description: `Your token "${result.name}" has been saved.` });
-    } else {
-      toast({ variant: "destructive", title: "Forge Failed", description: result.error });
+    
+    try {
+      const tokensCollectionRef = collection(firestore, `users/${user.uid}/pumpkin_tokens`);
+      const tokenCount = savedTokens?.length ?? 0;
+      const tokenName = `Pumpkin Punk #${(tokenCount + 1).toString().padStart(3, '0')}`;
+
+      addDocumentNonBlocking(tokensCollectionRef, {
+        tokenName: tokenName,
+        traitRecipe: selectedTraits,
+        forgedAt: new Date(),
+        userId: user.uid,
+      });
+
+      toast({ title: "Punk Forged!", description: `Your token "${tokenName}" has been saved.` });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      toast({ variant: "destructive", title: "Forge Failed", description: errorMessage });
+    } finally {
+      setTimeout(() => setIsSaving(false), 1000); // Brief disable
     }
-    setTimeout(() => setIsSaving(false), 1000); // Brief disable
   };
 
   return (
@@ -102,7 +92,7 @@ export default function SpookyPunksPage() {
           <div className="lg:col-span-2 flex flex-col items-center gap-8">
             <CharacterDisplay selectedTraits={selectedTraits} />
             <div className="w-full">
-              <SavedTokensList tokens={savedTokens} />
+              <SavedTokensList tokens={savedTokens || []} />
             </div>
           </div>
           <div className="lg:col-span-1">
