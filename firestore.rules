@@ -1,90 +1,63 @@
 /**
- * @fileoverview Firestore Security Rules for Spooky Punks application.
+ * @fileoverview Firestore Security Rules for Spooky Punks Application
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for PumpkinToken documents.
- * Users can only create, read, update, and delete tokens that they own.
+ * This ruleset enforces a strict user-ownership model for PumpkinTokens. Each user can only
+ * access their own tokens.  Data is denormalized to enable simple, performant rules.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profiles. Only the user themselves can access their profile.
- * - /users/{userId}/pumpkin_tokens/{tokenId}: Stores PumpkinToken documents owned by a specific user.
+ * - /users/{userId}: Stores user profile data.
+ * - /users/{userId}/pumpkin_tokens/{tokenId}: Stores PumpkinToken data owned by the user. Each token
+ *   document contains a denormalized userId field.
  *
  * Key Security Decisions:
- * - No public listing of users is allowed.
- * - PumpkinToken documents have a denormalized `userId` field for efficient authorization checks.
- * - Data validation is limited to ensuring ownership and preventing modification of the `userId` field after creation.
- *
- * Denormalization for Authorization:
- * The `PumpkinToken` document contains a `userId` field, which is a copy of the user's ID.
- * This allows for efficient ownership checks without needing to perform additional `get()` operations.
- *
- * Structural Segregation:
- * User-specific data (PumpkinTokens) is stored under the `/users/{userId}` path.
- * This segregation simplifies security rules, ensuring all documents within a collection share similar access control requirements.
+ * - Users can only create, read, update, and delete their own PumpkinTokens.
+ * - Listing all users is disallowed.
+ * - Data required for authorization is denormalized onto the documents being secured.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Enforces access control for user profiles. Only the user themselves can read or write their profile.
+     * @description Secure user profiles.
      * @path /users/{userId}
-     * @allow (create) User with ID 'user_abc' can create their own profile.
-     * @allow (get) User with ID 'user_abc' can read their own profile.
-     * @allow (update) User with ID 'user_abc' can update their own profile.
-     * @allow (delete) User with ID 'user_abc' can delete their own profile.
-     * @deny (create) User with ID 'user_xyz' cannot create a profile for user 'user_abc'.
-     * @deny (get) User with ID 'user_xyz' cannot read the profile of user 'user_abc'.
-     * @deny (update) User with ID 'user_xyz' cannot update the profile of user 'user_abc'.
-     * @deny (delete) User with ID 'user_xyz' cannot delete the profile of user 'user_abc'.
-     * @principle Enforces document ownership for all operations on user profiles.
+     * @allow (create) User 'user_abc' can create their own profile.
+     * @deny (create) User 'user_abc' cannot create a profile for 'user_xyz'.
+     * @allow (get) User 'user_abc' can read their own profile.
+     * @deny (get) User 'user_abc' cannot read profile of 'user_xyz'.
+     * @principle Enforces document ownership for writes and reads.
      */
     match /users/{userId} {
       function isOwner(userId) {
-        return request.auth.uid == userId;
+        return request.auth != null && request.auth.uid == userId;
       }
-
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      
+      allow create: if isOwner(userId);
       allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow update: if false;
+      allow delete: if false;
     }
 
     /**
-     * @description Enforces access control for PumpkinToken documents. Only the owner of the token can create, read, update, or delete it.
+     * @description Secure PumpkinTokens owned by a specific user.
      * @path /users/{userId}/pumpkin_tokens/{tokenId}
-     * @allow (create) User with ID 'user_abc' can create a PumpkinToken document under their user path.
-     * @allow (get) User with ID 'user_abc' can read their own PumpkinToken document.
-     * @allow (list) User with ID 'user_abc' can list their own PumpkinToken documents.
-     * @allow (update) User with ID 'user_abc' can update their own PumpkinToken document.
-     * @allow (delete) User with ID 'user_abc' can delete their own PumpkinToken document.
-     * @deny (create) User with ID 'user_xyz' cannot create a PumpkinToken document for user 'user_abc'.
-     * @deny (get) User with ID 'user_xyz' cannot read the PumpkinToken document of user 'user_abc'.
-     * @deny (update) User with ID 'user_xyz' cannot update the PumpkinToken document of user 'user_abc'.
-     * @deny (delete) User with ID 'user_xyz' cannot delete the PumpkinToken document of user 'user_abc'.
-     * @principle Enforces document ownership for writes, restricts listing to the owner, and validates relational integrity.
+     * @allow (create) User 'user_abc' can create a token under their user ID.
+     * @deny (create) User 'user_abc' cannot create a token under user ID 'user_xyz'.
+     * @allow (get) User 'user_abc' can read their own token.
+     * @deny (get) User 'user_abc' cannot read a token owned by 'user_xyz'.
+     * @principle Enforces document ownership for writes and reads, and validates data consistency.
      */
     match /users/{userId}/pumpkin_tokens/{tokenId} {
       function isOwner(userId) {
-        return request.auth.uid == userId;
+        return request.auth != null && request.auth.uid == userId;
       }
-
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       function isExistingOwner(userId) {
         return isOwner(userId) && resource != null;
       }
-
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
       allow get: if isOwner(userId);
       allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.userId == userId && request.resource.data.id == tokenId;
       allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
       allow delete: if isExistingOwner(userId);
     }
