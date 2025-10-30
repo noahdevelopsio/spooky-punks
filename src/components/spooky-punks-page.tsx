@@ -1,29 +1,28 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { collection, query, orderBy, serverTimestamp } from "firebase/firestore";
+import { useState, useEffect, useCallback, useTransition } from "react";
+import { collection, query, orderBy } from "firebase/firestore";
 import { 
   useFirebase,
   useUser, 
   useCollection,
   initiateAnonymousSignIn, 
-  addDocumentNonBlocking,
   useMemoFirebase,
 } from "@/firebase";
 import { TRAIT_DATA, TRAIT_LAYER_NAMES, type SelectedTraits } from "@/data/traits";
 import { useToast } from "@/hooks/use-toast";
+import { saveToken } from "@/app/actions";
 
 import Header from "@/components/header";
 import CharacterDisplay from "@/components/character-display";
 import CustomizationControls from "@/components/customization-controls";
 import SavedTokensList, { type Token } from "@/components/saved-tokens-list";
-import { generatePunk, type GeneratePunkInput } from "@/ai/flows/generate-punk-flow";
 
 export default function SpookyPunksPage() {
   const { auth, firestore } = useFirebase();
   const { user, isUserLoading } = useUser();
   const [selectedTraits, setSelectedTraits] = useState<SelectedTraits | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving, startSaving] = useTransition();
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -66,40 +65,22 @@ export default function SpookyPunksPage() {
   };
 
   const handleForgeToken = async () => {
-    if (!user || !selectedTraits || !firestore) {
-      toast({ variant: "destructive", title: "Error", description: "Cannot save token. User or traits not ready." });
+    if (!user || !selectedTraits) {
+      toast({ variant: "destructive", title: "Error", description: "Cannot forge token. User or traits not ready." });
       return;
     }
-    setIsSaving(true);
-    setGeneratedImageUrl(null);
     
-    try {
-      const { imageUrl } = await generatePunk({ traits: selectedTraits });
-      if (!imageUrl) {
-        throw new Error("Image generation failed.");
+    startSaving(async () => {
+      setGeneratedImageUrl(null);
+      const result = await saveToken(user.uid, selectedTraits);
+      if (result.success && result.name && result.imageUrl) {
+        setGeneratedImageUrl(result.imageUrl);
+        toast({ title: "Punk Forged!", description: `Your token "${result.name}" has been saved.` });
+      } else {
+        toast({ variant: "destructive", title: "Forge Failed", description: result.error || "An unknown error occurred." });
+        setGeneratedImageUrl(null);
       }
-      setGeneratedImageUrl(imageUrl);
-
-      const tokensCollectionRef = collection(firestore, `users/${user.uid}/pumpkin_tokens`);
-      const tokenCount = savedTokens?.length ?? 0;
-      const tokenName = `Pumpkin Punk #${(tokenCount + 1).toString().padStart(3, '0')}`;
-
-      addDocumentNonBlocking(tokensCollectionRef, {
-        tokenName: tokenName,
-        traitRecipe: selectedTraits,
-        forgedAt: serverTimestamp(),
-        userId: user.uid,
-        imageUrl: imageUrl,
-      });
-
-      toast({ title: "Punk Forged!", description: `Your token "${tokenName}" has been saved.` });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      toast({ variant: "destructive", title: "Forge Failed", description: errorMessage });
-      setGeneratedImageUrl(null); // Clear image on failure
-    } finally {
-      setIsSaving(false);
-    }
+    });
   };
 
   return (
