@@ -1,6 +1,6 @@
 "use server";
 
-import { initializeFirebase, addDocumentNonBlocking } from "@/firebase";
+import { initializeServerFirebase, addDocumentNonBlocking } from "@/firebase/server-init";
 import type { SelectedTraits } from "@/data/traits";
 import { collection, getDocs, query, serverTimestamp } from "firebase/firestore";
 import { generatePunk } from "@/ai/flows/generate-punk-flow";
@@ -10,7 +10,7 @@ export async function saveToken(userId: string, recipe: SelectedTraits) {
     return { success: false, error: "Invalid user or recipe" };
   }
 
-  const { firestore } = initializeFirebase();
+  const { firestore } = initializeServerFirebase();
 
   try {
     // Generate the punk image first
@@ -27,7 +27,9 @@ export async function saveToken(userId: string, recipe: SelectedTraits) {
     const tokenCount = querySnapshot.size;
     const tokenName = `Pumpkin Punk #${(tokenCount + 1).toString().padStart(3, '0')}`;
 
-    addDocumentNonBlocking(tokensCollectionRef, {
+    // We use await here because this is a server action and we want to know the result
+    // before returning a response to the client.
+    await addDocumentNonBlocking(tokensCollectionRef, {
       tokenName: tokenName,
       traitRecipe: recipe,
       forgedAt: serverTimestamp(),
