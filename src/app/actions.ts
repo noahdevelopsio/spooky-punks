@@ -22,7 +22,7 @@ export async function saveToken(userId: string, recipe: SelectedTraits) {
     const tokensCollectionRef = collection(firestore, `users/${userId}/pumpkin_tokens`);
     
     // Get current token count to generate a name
-    const q = query(tokensCollectionRef);
+    const q = query(tokensCollection_ref);
     const querySnapshot = await getDocs(q);
     const tokenCount = querySnapshot.size;
     const tokenName = `Pumpkin Punk #${(tokenCount + 1).toString().padStart(3, '0')}`;
@@ -40,7 +40,14 @@ export async function saveToken(userId: string, recipe: SelectedTraits) {
     return { success: true, name: tokenName, imageUrl: generationResult.imageUrl };
   } catch (error) {
     console.error("Error saving token:", error);
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+    let errorMessage = "An unknown error occurred.";
+    if (error instanceof Error) {
+        if (error.message.includes("429 Too Many Requests") || error.message.includes("Quota exceeded")) {
+            errorMessage = "AI generation failed: Quota exceeded. Please ensure the Generative Language API is enabled and billing is configured for your Google Cloud project.";
+        } else {
+            errorMessage = error.message;
+        }
+    }
     return { success: false, error: errorMessage };
   }
 }
