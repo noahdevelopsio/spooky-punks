@@ -84,7 +84,7 @@ const generatePunkFlow = ai.defineFlow(
     `;
 
     const {media} = await ai.generate({
-      model: 'googleai/gemini-2.0-flash-preview-image-generation',
+      model: 'googleai/imagen-4.0-fast-generate-001',
       prompt: [
         {text: textPrompt},
         ...mediaParts
