@@ -50,7 +50,6 @@ const generatePunkFlow = ai.defineFlow(
   },
   async ({traits}) => {
     const traitDescriptions: string[] = [];
-    const mediaParts: MediaPart[] = [];
     const orderedLayers = TRAIT_LAYER_NAMES;
 
     for (const layerName of orderedLayers) {
@@ -60,35 +59,24 @@ const generatePunkFlow = ai.defineFlow(
       const layer = TRAIT_DATA[layerName];
       const trait = layer.options.find(opt => opt.id === traitId);
 
-      if (trait) {
-        if(trait.label !== 'None') {
-          traitDescriptions.push(`${layer.label}: ${trait.label}`);
-        }
-        if (trait.url) {
-          const dataUri = await urlToDataUri(trait.url);
-          if (dataUri) {
-            mediaParts.push({media: {url: dataUri}});
-          }
-        }
+      if (trait && trait.label !== 'None') {
+        traitDescriptions.push(`${layer.label}: ${trait.label}`);
       }
     }
     
     const textPrompt = `Generate a single, cohesive "Spooky Punk" character portrait in a pixel art style. The character should be a pumpkin-headed figure.
     
     Combine the following traits and styles into one image. Do not show multiple options.
-    - Style: Pixelated, 8-bit, punk rock aesthetic.
-    - Character: The main subject is a a pumpkin head character.
+    - Style: Pixelated, 8-bit, punk rock aesthetic, single character centered.
+    - Character: The main subject is a pumpkin head character.
     - Traits to include: ${traitDescriptions.join(', ')}.
 
-    Use the provided images as strong visual references for the style and content of each trait. The final image should be a single, unified character, not a collage. The background should be visible where not obscured by other layers.
+    The final image should be a single, unified character, not a collage. The background should be visible where not obscured by other layers.
     `;
 
     const {media} = await ai.generate({
       model: 'googleai/imagen-4.0-fast-generate-001',
-      prompt: [
-        {text: textPrompt},
-        ...mediaParts
-      ],
+      prompt: textPrompt,
       config: {
         responseModalities: ['IMAGE'],
         // Low safety settings for creative content, adjust if needed
