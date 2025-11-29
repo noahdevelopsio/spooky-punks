@@ -63,11 +63,11 @@ const generatePunkFlow = ai.defineFlow(
       },
     });
 
-    if (!output?.imageUrl) {
+    if (!output?.media?.url) {
       console.error('Image generation output:', JSON.stringify(output, null, 2));
       throw new Error('Image generation failed to produce an image URL.');
     }
     
-    return { imageUrl: output.imageUrl };
+    return { imageUrl: output.media.url };
   }
 );
