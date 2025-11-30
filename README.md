@@ -19,5 +19,3 @@ This project is built with a modern web stack:
 *   **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 *   **Generative AI**: [Google's Gemini model](https://deepmind.google/technologies/gemini/) via [Genkit](https://firebase.google.com/docs/genkit)
 *   **Backend & Database**: [Firebase](https://firebase.google.com/) (Authentication and Firestore)
-
-The application is designed to run in Firebase Studio.
